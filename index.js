@@ -5,96 +5,105 @@
  * @param {Object} packageParams of the databot.
  */
 function GrabTraffic(tdxApi, output, packageParams) {
-    tdxApi.getDatasetData(packageParams.trafficSources, null, null, null, function (errSources, sourcesData) {
-        if (errSources) {
-            output.error("Error Traffic sources table: %s", JSON.stringify(errSources));
-            process.exit(1);
-        } else {
+    tdxApi.getDatasetDataAsync(packageParams.trafficSources, null, null, null)
+        .then((sourcesData) => {
             output.debug("Retrieved Traffic sources table: %d entries", sourcesData.data.length);
-
-            var element;
-            var idList = [];
-
-            /*
-            if (!sourcesData.data.length)
-                return;
-            else {
-
-                // Pick the first element of the table
-                // as only one API call is needed for this particulat dataset
-                element = sourcesData.data[0];
-
-                if (element.Src != 'MK' && element.Datatype != 'XML')
-                    return;
-            }
-
-            _.map(sourcesData.data, function (val) {
-                idList.push(val.LotCode);
-            });
-
-            var req = function (el, cb) {
-
-                output.debug("Processing element Host:%s", el.Host);
-
-                request
-                    .get(el.Host + el.Path)
-                    .auth(el.APIKey, '')
-                    .end((error, response) => {
-                        if (error) {
-                            output.error("API request error: %s", error);
-                            cb();
-                        } else {
-                            parseXmlStringAsync(response.text)
-                                .then((result) => {
-                                    var entryList = [];
-                                    _.forEach(result.feed.datastream, (val) => {
-                                        if (idList.indexOf(Number(val['$']['id'])) > -1) {
-                                            var entry = {
-                                                'ID': Number(val['$']['id']),
-                                                'timestamp': Number(new Date(val.current_time[0]).getTime()),
-                                                'currentvalue': Number(val.current_value[0]),
-                                                'maxvalue': Number(val.max_value[0])
-                                            };
-
-                                            entryList.push(entry);
-                                        }
-                                    });
-
-                                    return tdxApi.updateDatasetDataAsync(packageParams.parkDataTable, entryList, true);
-                                })
-                                .then((res) => {
-                                    // TDX API result.
-                                    output.debug(res);
-                                    return ({ error: false });
-                                })
-                                .catch((err) => {
-                                    // TDX API error or XML parse error.
-                                    output.error(err);
-                                    output.error("Failure processing entries: %s", err.message);
-                                    return ({ error: true });
-                                })
-                                .then((res) => {
-                                    // Finish execution
-                                    return cb(res);
-                                });
-                        }
-                    });
-            }
-
-            var computing = false;
-            var timer = setInterval(()=>{
-                if (!computing) {
-                    computing = true;
-                    req(element, (res)=>{
-                        output.debug(res);
-                        computing = false;
-                    });
-                }
-            }, packageParams.timerFrequency);
-            */
-        }
-        
+            return Promise.all(_.map(sourcesData.data, function (sources) {
+                return request
+                    .get(sources.Host + sources.Path)
+                    .auth(sources.APIKey, '')
+                    .then((response) => {
+                        return parseXmlStringAsync(response.text);
+                    })
+                    .catch((error) => {})
+                    .then((result)=>{
+                        return(result.feed.title);
+                    })
+            }));
+        })
+        .catch((errSources) => {
+            output.error("%s", JSON.stringify(errSources));
+            process.exit(1);
+        }).then((result) => {
+            output.debug(result);
+        });
+    /*
+    if (!sourcesData.data.length)
+        return;
+    else {
+ 
+        // Pick the first element of the table
+        // as only one API call is needed for this particulat dataset
+        element = sourcesData.data[0];
+ 
+        if (element.Src != 'MK' && element.Datatype != 'XML')
+            return;
+    }
+ 
+    _.map(sourcesData.data, function (val) {
+        idList.push(val.LotCode);
     });
+ 
+    var req = function (el, cb) {
+ 
+        output.debug("Processing element Host:%s", el.Host);
+ 
+        request
+            .get(el.Host + el.Path)
+            .auth(el.APIKey, '')
+            .end((error, response) => {
+                if (error) {
+                    output.error("API request error: %s", error);
+                    cb();
+                } else {
+                    parseXmlStringAsync(response.text)
+                        .then((result) => {
+                            var entryList = [];
+                            _.forEach(result.feed.datastream, (val) => {
+                                if (idList.indexOf(Number(val['$']['id'])) > -1) {
+                                    var entry = {
+                                        'ID': Number(val['$']['id']),
+                                        'timestamp': Number(new Date(val.current_time[0]).getTime()),
+                                        'currentvalue': Number(val.current_value[0]),
+                                        'maxvalue': Number(val.max_value[0])
+                                    };
+ 
+                                    entryList.push(entry);
+                                }
+                            });
+ 
+                            return tdxApi.updateDatasetDataAsync(packageParams.parkDataTable, entryList, true);
+                        })
+                        .then((res) => {
+                            // TDX API result.
+                            output.debug(res);
+                            return ({ error: false });
+                        })
+                        .catch((err) => {
+                            // TDX API error or XML parse error.
+                            output.error(err);
+                            output.error("Failure processing entries: %s", err.message);
+                            return ({ error: true });
+                        })
+                        .then((res) => {
+                            // Finish execution
+                            return cb(res);
+                        });
+                }
+            });
+    }
+ 
+    var computing = false;
+    var timer = setInterval(()=>{
+        if (!computing) {
+            computing = true;
+            req(element, (res)=>{
+                output.debug(res);
+                computing = false;
+            });
+        }
+    }, packageParams.timerFrequency);
+    */
 }
 
 /**
