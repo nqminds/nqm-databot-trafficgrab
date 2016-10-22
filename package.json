@@ -1,6 +1,6 @@
 {
   "name": "nqm-databot-trafficgrab",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Databot to grab Traffic data",
   "main": "index.js",
   "scripts": {
@@ -22,6 +22,8 @@
     "lodash": "^4.16.4",
     "nqm-api-tdx": "^0.1.18",
     "nqm-databot-utils": "^0.1.4",
+    "request": "^2.75.0",
+    "request-promise": "^4.1.1",
     "superagent": "^2.3.0",
     "xml2js": "^0.4.17"
   },

@@ -5,105 +5,83 @@
  * @param {Object} packageParams of the databot.
  */
 function GrabTraffic(tdxApi, output, packageParams) {
-    tdxApi.getDatasetDataAsync(packageParams.trafficSources, null, null, null)
-        .then((sourcesData) => {
-            output.debug("Retrieved Traffic sources table: %d entries", sourcesData.data.length);
-            return Promise.all(_.map(sourcesData.data, function (sources) {
-                return request
-                    .get(sources.Host + sources.Path)
-                    .auth(sources.APIKey, '')
-                    .then((response) => {
-                        return parseXmlStringAsync(response.text);
+    var req = function () {
+        return tdxApi.getDatasetDataAsync(packageParams.trafficSources, null, null, null)
+            .then((sourcesData) => {
+                output.debug("Retrieved Traffic sources table: %d entries", sourcesData.data.length);
+
+                return Promise.all(_.map(sourcesData.data, (sources) => {
+                    return request({
+                        method: 'GET',
+                        url: "http://" + sources.APIKey + ":@" + sources.Host + sources.Path,
+                        simple: true
                     })
-                    .catch((error) => {})
-                    .then((result)=>{
-                        return(result.feed.title);
-                    })
-            }));
-        })
-        .catch((errSources) => {
-            output.error("%s", JSON.stringify(errSources));
-            process.exit(1);
-        }).then((result) => {
-            output.debug(result);
-        });
-    /*
-    if (!sourcesData.data.length)
-        return;
-    else {
- 
-        // Pick the first element of the table
-        // as only one API call is needed for this particulat dataset
-        element = sourcesData.data[0];
- 
-        if (element.Src != 'MK' && element.Datatype != 'XML')
-            return;
-    }
- 
-    _.map(sourcesData.data, function (val) {
-        idList.push(val.LotCode);
-    });
- 
-    var req = function (el, cb) {
- 
-        output.debug("Processing element Host:%s", el.Host);
- 
-        request
-            .get(el.Host + el.Path)
-            .auth(el.APIKey, '')
-            .end((error, response) => {
-                if (error) {
-                    output.error("API request error: %s", error);
-                    cb();
-                } else {
-                    parseXmlStringAsync(response.text)
+                        .then(parseXmlStringAsync)
+                        .catch((error) => {
+                            output.debug("Error retrieving API for ID: %d [%d]", sources.ID, error.statusCode);
+                        })
                         .then((result) => {
-                            var entryList = [];
-                            _.forEach(result.feed.datastream, (val) => {
-                                if (idList.indexOf(Number(val['$']['id'])) > -1) {
-                                    var entry = {
-                                        'ID': Number(val['$']['id']),
-                                        'timestamp': Number(new Date(val.current_time[0]).getTime()),
-                                        'currentvalue': Number(val.current_value[0]),
-                                        'maxvalue': Number(val.max_value[0])
-                                    };
- 
-                                    entryList.push(entry);
-                                }
-                            });
- 
-                            return tdxApi.updateDatasetDataAsync(packageParams.parkDataTable, entryList, true);
-                        })
-                        .then((res) => {
-                            // TDX API result.
-                            output.debug(res);
-                            return ({ error: false });
-                        })
-                        .catch((err) => {
-                            // TDX API error or XML parse error.
-                            output.error(err);
-                            output.error("Failure processing entries: %s", err.message);
-                            return ({ error: true });
-                        })
-                        .then((res) => {
-                            // Finish execution
-                            return cb(res);
+                            var entry = {};
+
+                            if (result !== undefined) {
+                                entry['ID'] = sources.ID;
+                                _.forEach(result.feed.datastream, (val) => {
+                                    var valNum = Number(val.current_value[0]);
+
+                                    if (val.current_value[0] == 'NULL' || val.current_value[0] == '-1')
+                                        valNum = 0;
+
+                                    if (val.tag[0] == 'time_stamp')
+                                        entry['timestamp'] = valNum;
+                                    else if (val.tag[0] == 'entry_congestion_level')
+                                        entry['EntryCongestionLevel'] = valNum;
+                                    else if (val.tag[0] == 'exit_congestion_level')
+                                        entry['ExitCongestionLevel'] = valNum;
+                                    else if (val.tag[0] == 'RoundaboutEntry')
+                                        entry['RoundaboutEntry'] = valNum;
+                                    else if (val.tag[0] == 'RoundaboutEntrySpeed')
+                                        entry['RoundaboutEntrySpeed'] = valNum;
+                                    else if (val.tag[0] == 'RoundaboutExit')
+                                        entry['RoundaboutExit'] = valNum;
+                                    else if (val.tag[0] == 'RoundaboutExitSpeed')
+                                        entry['RoundaboutExitSpeed'] = valNum;
+                                    else if (val.tag[0] == 'RoundaboutInside')
+                                        entry['RoundaboutInside'] = valNum;
+                                    else if (val.tag[0] == 'RoundaboutInsideSpeed')
+                                        entry['RoundaboutInsideSpeed'] = valNum;
+                                });
+                            }
+                            return (entry);
                         });
-                }
+                }));
+            })
+            .then((result) => {
+                var entries = [];
+                _.forEach(result, function (val) {
+                    if (!_.isEmpty(val))
+                        entries.push(val);
+                });
+                output.debug("Processed %d entries", entries.length);
+                return tdxApi.updateDatasetDataAsync(packageParams.trafficDataTable, entries, true);
+            })
+            .catch((err) => {
+                output.error("%s", JSON.stringify(err));
+                return err;
             });
     }
- 
+
     var computing = false;
-    var timer = setInterval(()=>{
+    var timer = setInterval(() => {
         if (!computing) {
             computing = true;
-            req(element, (res)=>{
-                output.debug(res);
+            req().then((result) => {
+                output.debug(result);
                 computing = false;
             });
+
         }
     }, packageParams.timerFrequency);
-    */
+
 }
 
 /**
@@ -136,7 +114,7 @@ function databot(input, output, context) {
 
 var input;
 var _ = require('lodash');
-var request = require("superagent");
+var request = require("request-promise");
 var Promise = require("bluebird");
 var xml2js = require('xml2js');
 var TDXAPI = require("nqm-api-tdx");
@@ -146,7 +124,7 @@ Promise.promisifyAll(xml2js);
 parseXmlStringAsync = xml2js.parseStringAsync;
 
 if (process.env.NODE_ENV == 'test') {
-    // Requires nqm-databot-gpsgrab.json file for testing
+    // Requires nqm-databot-trafficgrab.json file for testing
     input = require('./databot-test.js')(process.argv[2]);
 } else {
     // Load the nqm input module for receiving input from the process host.
