@@ -17,46 +17,45 @@ function GrabTraffic(tdxApi, output, packageParams) {
                         simple: true
                     })
                         .then(parseXmlStringAsync)
-                        .catch((error) => {
-                            output.debug("Error retrieving API for ID: %d [%d]", sources.ID, error.statusCode);
-                        })
                         .then((result) => {
                             var entry = {};
 
-                            if (result !== undefined) {
-                                entry['ID'] = sources.ID;
-                                _.forEach(result.feed.datastream, (val) => {
-                                    var valNum = Number(val.current_value[0]);
+                            entry['ID'] = sources.ID;
+                            _.forEach(result.feed.datastream, (val) => {
+                                var valNum = Number(val.current_value[0]);
 
-                                    if (val.current_value[0] == 'NULL' || val.current_value[0] == '-1')
-                                        valNum = 0;
+                                if (val.current_value[0] == 'NULL' || val.current_value[0] == '-1')
+                                    valNum = 0;
 
-                                    if (val.tag[0] == 'time_stamp')
-                                        entry['timestamp'] = valNum;
-                                    else if (val.tag[0] == 'entry_congestion_level')
-                                        entry['EntryCongestionLevel'] = valNum;
-                                    else if (val.tag[0] == 'exit_congestion_level')
-                                        entry['ExitCongestionLevel'] = valNum;
-                                    else if (val.tag[0] == 'RoundaboutEntry')
-                                        entry['RoundaboutEntry'] = valNum;
-                                    else if (val.tag[0] == 'RoundaboutEntrySpeed')
-                                        entry['RoundaboutEntrySpeed'] = valNum;
-                                    else if (val.tag[0] == 'RoundaboutExit')
-                                        entry['RoundaboutExit'] = valNum;
-                                    else if (val.tag[0] == 'RoundaboutExitSpeed')
-                                        entry['RoundaboutExitSpeed'] = valNum;
-                                    else if (val.tag[0] == 'RoundaboutInside')
-                                        entry['RoundaboutInside'] = valNum;
-                                    else if (val.tag[0] == 'RoundaboutInsideSpeed')
-                                        entry['RoundaboutInsideSpeed'] = valNum;
-                                });
-                            }
+                                if (val.tag[0] == 'time_stamp')
+                                    entry['timestamp'] = valNum;
+                                else if (val.tag[0] == 'entry_congestion_level')
+                                    entry['EntryCongestionLevel'] = valNum;
+                                else if (val.tag[0] == 'exit_congestion_level')
+                                    entry['ExitCongestionLevel'] = valNum;
+                                else if (val.tag[0] == 'RoundaboutEntry')
+                                    entry['RoundaboutEntry'] = valNum;
+                                else if (val.tag[0] == 'RoundaboutEntrySpeed')
+                                    entry['RoundaboutEntrySpeed'] = valNum;
+                                else if (val.tag[0] == 'RoundaboutExit')
+                                    entry['RoundaboutExit'] = valNum;
+                                else if (val.tag[0] == 'RoundaboutExitSpeed')
+                                    entry['RoundaboutExitSpeed'] = valNum;
+                                else if (val.tag[0] == 'RoundaboutInside')
+                                    entry['RoundaboutInside'] = valNum;
+                                else if (val.tag[0] == 'RoundaboutInsideSpeed')
+                                    entry['RoundaboutInsideSpeed'] = valNum;
+                            });
                             return (entry);
+                        }).catch((error) => {
+                            output.debug("Error retrieving API for ID: %d [%d]", sources.ID, error.statusCode);
+                            return ({});
                         });
                 }));
             })
             .then((result) => {
                 var entries = [];
+
                 _.forEach(result, function (val) {
                     if (!_.isEmpty(val))
                         entries.push(val);
@@ -69,7 +68,11 @@ function GrabTraffic(tdxApi, output, packageParams) {
                 return err;
             });
     }
-
+    req().then((result) => {
+        output.debug(result);
+        computing = false;
+    });
+    /*
     var computing = false;
     var timer = setInterval(() => {
         if (!computing) {
@@ -81,7 +84,7 @@ function GrabTraffic(tdxApi, output, packageParams) {
 
         }
     }, packageParams.timerFrequency);
-
+    */
 }
 
 /**
