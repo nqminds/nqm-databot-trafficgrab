@@ -68,11 +68,7 @@ function GrabTraffic(tdxApi, output, packageParams) {
                 return err;
             });
     }
-    req().then((result) => {
-        output.debug(result);
-        computing = false;
-    });
-    /*
+
     var computing = false;
     var timer = setInterval(() => {
         if (!computing) {
@@ -84,7 +80,7 @@ function GrabTraffic(tdxApi, output, packageParams) {
 
         }
     }, packageParams.timerFrequency);
-    */
+
 }
 
 /**
