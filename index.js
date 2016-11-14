@@ -69,7 +69,7 @@ function GrabTraffic(tdxApi, output, packageParams) {
                 return tdxApi.updateDatasetDataAsync(packageParams.trafficDataTableLatest, entries, true);
             })
             .catch((err) => {
-                output.error("%s", JSON.stringify(err));
+                output.error("Error grabbing/updating traffic data: %s", JSON.stringify(err));
                 return err;
             });
     }
