@@ -6,6 +6,7 @@
  */
 function GrabTraffic(tdxApi, output, packageParams) {
     var req = function () {
+        var entries = [];
         return tdxApi.getDatasetDataAsync(packageParams.trafficSources, null, null, null)
             .then((sourcesData) => {
                 output.debug("Retrieved Traffic sources table: %d entries", sourcesData.data.length);
@@ -54,14 +55,18 @@ function GrabTraffic(tdxApi, output, packageParams) {
                 }));
             })
             .then((result) => {
-                var entries = [];
-
                 _.forEach(result, function (val) {
                     if (!_.isEmpty(val))
                         entries.push(val);
                 });
                 output.debug("Processed %d entries", entries.length);
                 return tdxApi.updateDatasetDataAsync(packageParams.trafficDataTable, entries, true);
+            })
+            .then((result)=>{
+                output.debug("Added %d entries to dataset", entries.length);
+                output.debug(result);
+                output.debug("Saving %d entries to trafficDataTableLatest", entries.length);
+                return tdxApi.updateDatasetDataAsync(packageParams.trafficDataTableLatest, entries, true);
             })
             .catch((err) => {
                 output.error("%s", JSON.stringify(err));
