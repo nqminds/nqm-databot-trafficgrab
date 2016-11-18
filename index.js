@@ -59,13 +59,10 @@ function GrabTraffic(tdxApi, output, packageParams) {
                     if (!_.isEmpty(val))
                         entries.push(val);
                 });
-                output.debug("Processed %d entries", entries.length);
                 return tdxApi.updateDatasetDataAsync(packageParams.trafficDataTable, entries, true);
             })
             .then((result)=>{
-                output.debug("Added %d entries to dataset", entries.length);
-                output.debug(result);
-                output.debug("Saving %d entries to trafficDataTableLatest", entries.length);
+                output.debug("Saving %d entries to trafficDataTable", entries.length);
                 return tdxApi.updateDatasetDataAsync(packageParams.trafficDataTableLatest, entries, true);
             })
             .catch((err) => {
@@ -79,7 +76,6 @@ function GrabTraffic(tdxApi, output, packageParams) {
         if (!computing) {
             computing = true;
             req().then((result) => {
-                output.debug(result);
                 computing = false;
             });
 
